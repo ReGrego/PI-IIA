@@ -1,98 +1,60 @@
-from socket import *
+import socket
 
-#Configuração Conexão
-HOST = '127.0.0.1'
-PORTA = 24000
- # Estabelece a conexão
-conexao = socket(AF_INET, SOCK_STREAM)
-conexao.connect((HOST, PORTA))
+HOST = '127.0.0.1'  
+PORT = 24000        
 
+def realizar_login():
+    login = input("Login: ")
+    senha = input("Senha: ")
+    return f"LOGIN {login} {senha}"
 
-# Dados de login
-usuario = '1152021100080'
-senha = '123456'
+def menu():
+    print("\nCaixa Eletrônico:")
+    print("1. Sacar")
+    print("2. Depositar")
+    print("3. Visualizar saldo")
+    print("4. Sair")
 
-socket.sendall(f'{usuario},{senha}'.encode())
-
-
-while True:
-
-    #Envia dados
-    msg = input("Conectado")
-    
-    #Usa a função send para enviar os dados codificado
-    conexao.send(msg.encode())
-    #Recebe dados e decodifica para string novamente
-    data = conexao.recv(1024)
-    print('Servidor: ', data.decode())
-    conexao.close()
-
-    entradausuario = input('usuario: ')
-    entradasenha = input('senha: ')
-
-    if entradausuario == usuario and entradasenha == senha:
-      print('Seja bem-vindo!')
-    else:
-      print('Usuario ou senha incorretos. Por favor, tente novamente.')  
-
-
-
-    menu = """
-    [1] Depositar
-    [2] Sacar
-    [3] Saldo
-    [4] Sair
-
-    => """
-
-    saldo = 0
-    limite = 500
-    extrato = []
-    numero_saques = 0
-    LIMITE_SAQUES = 3
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conexao:
+    conexao.connect((HOST, PORT))
 
     while True:
-        opcao = input(menu)
+        requisicao_login = realizar_login()
+        conexao.sendall(requisicao_login.encode())
 
-        if opcao == "d":
-         print("Depósito")
-         deposito = float(input("Digite o valor do depósito: "))
-         saldo += deposito
-         extrato.append(f"DEPOSITO: + R${deposito:.2f}.")
-         print(f"Saldo atual da conta: {saldo}")
+        resposta = conexao.recv(1024).decode()
+        print(f"{resposta}")
 
-        elif opcao == "s":
-         print("Saque")
+        if resposta == "Login bem-sucedido.":
+            break  
+        else:
+            print("Tente novamente.\n")
 
-         if numero_saques < LIMITE_SAQUES:
-             if saldo >= limite:
-                 valor_saque = float(input("Digite o valor de saque que deseja: "))
-            
-                 if valor_saque > limite:
-                    print("O valor desejado excede o limite, tente outro valor.")
-                 else:
-                    numero_saques += 1 
-                    extrato.append(f"SAQUE: -R${valor_saque:.2f} {numero_saques}/{LIMITE_SAQUES}.")
-                    print("Saque realizado, retire o dinheiro")
-             else:
-              print("Não será possível sacar o dinheiro por falta de saldo")
+    while True:
+        menu()
+        opcao = input("Selecione uma opção: ")
 
-         else: 
-            print("Você não pode fazer mais saques hoje.")
+        if opcao == '1':
+            valor = input("Digite o valor que deseja sacar: ")
+            requisicao = f"SAQUE {valor}"
 
-        elif opcao == "e":
-          print("Extrato") 
+        elif opcao == '2':
+            valor = input("Digite o valor que deseja depositar: ")
+            requisicao = f"DEPOSITO {valor}"
 
-          if extrato:
-            print("\n ========== EXTRATO =========")
-            print('\n'.join(extrato))
-            print("\n ============================")
-            print(f"Saldo atual da conta: {saldo}")
-          else:
-            print("Não foram realizadas movimentações.")
+        elif opcao == '3':
+            requisicao = "SALDO"
 
-        elif opcao == "q":
-         break
+        elif opcao == '4':
+            print("Encerrando a sessão...")
+            print('Sessão encerrada.')
+            break
 
         else:
-         print("Operação inválida. Favor selecionar novamente a operação desejada.")
+            print("Opção inválida.")
+            continue
+
+        conexao.sendall(requisicao.encode())
+        data = conexao.recv(1024)
+
+        print(f"{data.decode()}")
